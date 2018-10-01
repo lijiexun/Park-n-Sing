@@ -55,12 +55,15 @@ data.test2 = data.test[,c(1:43, 50)]
 whichtraindata = data.train2
 whichtestdata = data.test2
 
+save(whichtraindata, whichtestdata,  file = "../Data/tapdata_dataforLSTM.RData")
+
+
 #Fit Random Forest Model
 rf = randomForest(professional.diagnosis ~ .,  ntree = 100 ,data = data.train)
 rf2 = randomForest(professional.diagnosis ~ .,  ntree = 100 , mtry = 6, data = whichtraindata, importance = TRUE)
 
 #### Performance Evaluation ####
-whichrf = rf3
+whichrf = rf2
 
 # plot importance plot 
 varImpPlot(whichrf)
