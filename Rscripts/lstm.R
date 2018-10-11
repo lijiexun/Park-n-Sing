@@ -20,6 +20,9 @@ y_test <- whichtestdata$professional.diagnosis
 cat(length(x_train), 'train sequences\n')
 cat(length(x_test), 'test sequences\n')
 
+x_train <- scale(x_train)
+x_test <- scale(x_test)
+
 # Cut texts after this number of words (among top max_features most common words)
 #maxlen <- 80  
 #cat('Pad sequences (samples x time)\n')
@@ -66,7 +69,7 @@ cat('Train...\n')
 model %>% fit(
   x_train, y_train,
   batch_size = batch_size,
-  epochs = 50,
+  epochs = 20,
   validation_data = list(x_test, y_test)
 )
 
@@ -77,3 +80,4 @@ scores <- model %>% evaluate(
 
 cat('Test score:', scores[[1]])
 cat('Test accuracy', scores[[2]])
+
