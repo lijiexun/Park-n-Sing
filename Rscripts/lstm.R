@@ -7,49 +7,63 @@ setwd("C:/Workspace/Park-n-Sing/Rscripts")
 
 cat('Loading data...\n')
 
-load('../Data/tapdata_dataforLSTM.RData')
+load('../Data/tapdata_dataforLSTM_byperson2.RData')
 
-glimpse(whichtestdata)
-glimpse(whichtraindata)
+data.train[[1]]
+data.test[[1]]
 
-x_train <- select(whichtraindata, meanTapInter:corXY)
-x_test <- select(whichtestdata, meanTapInter:corXY)
-y_train <- whichtraindata$professional.diagnosis
-y_test <- whichtestdata$professional.diagnosis
+y_train <- y[y$healthCode %in% train.healthCode,]$professional.diagnosis
+y_test <- y[y$healthCode %in% test.healthCode,]$professional.diagnosis
 
-cat(length(x_train), 'train sequences\n')
-cat(length(x_test), 'test sequences\n')
 
-x_train <- scale(x_train)
-x_test <- scale(x_test)
+list2ary = function(input.list){  #input a list of lists
+  rows.cols <- dim(input.list[[1]])
+  sheets <- length(input.list)
+  output.ary <- array(unlist(input.list), dim = c(rows.cols, sheets))
+  colnames(output.ary) <- colnames(input.list[[1]])
+  row.names(output.ary) <- row.names(input.list[[1]])
+  return(output.ary)    # output as a 3-D array
+}
 
-# Cut texts after this number of words (among top max_features most common words)
-#maxlen <- 80  
-#cat('Pad sequences (samples x time)\n')
-#x_train <- pad_sequences(x_train, maxlen = maxlen)
-#x_test <- pad_sequences(x_test, maxlen = maxlen)
 
-x_train <- as.matrix(x_train)
-x_test <- as.matrix(x_test)
+#padding
+maxlen <- 10
+
+df <- data.train
+for (i in 1:length(df)){
+  df[[i]] <- df[[i]] %>% head(maxlen)
+  while (nrow(df[[i]])<maxlen) {
+    df[[i]][nrow(df[[i]])+1,] <- 0
+  } 
+}
+x_train <- list2ary(df)
+dim(x_train) <- c(length(df), maxlen, 44)
+
+df <- data.test
+for (i in 1:length(df)){
+  df[[i]] <- df[[i]] %>% head(maxlen)
+  while (nrow(df[[i]])<maxlen) {
+    df[[i]][nrow(df[[i]])+1,] <- 0
+  } 
+}
+x_test <- list2ary(df)
+dim(x_test) <- c(length(df), maxlen, 44)
 
 cat('x_train shape:', dim(x_train), '\n')
 cat('x_test shape:', dim(x_test), '\n')
-
-dim(x_train) <- c(nrow(x_train),1,ncol(x_train))  # re-dimension
-dim(x_test) <- c(nrow(x_test),1,ncol(x_test))  # re-dimension
 
 # Response variables for training and testing sets
 y_train <- ifelse(y_train == TRUE, 1, 0)
 y_test  <- ifelse(y_test == TRUE, 1, 0)
 
-max_features <- 20000
+#max_features <- 20000
 batch_size <- 32
 
 cat('Build model...\n')
 model <- keras_model_sequential()
 model %>%
   #layer_embedding(input_dim = max_features, output_dim = 128) %>% 
-  layer_lstm(units = 64, input_shape = c(1, 43), dropout = 0.2, recurrent_dropout = 0.2) %>% 
+  layer_lstm(units = 128, input_shape = c(maxlen, 44), dropout = 0.2, recurrent_dropout = 0.2) %>% 
   #layer_dense(units = 32, activation = 'relu', input_shape = ncol(x_train)) %>% 
   layer_dropout(rate = 0.1) %>%
   layer_dense(units = 32, activation = 'relu') %>% 
@@ -65,12 +79,18 @@ model %>% compile(
   metrics = c('accuracy')
 )
 
+# Create a validation set
+x_val <- x_train[1:500,,]
+x_train_part <- x_train[501:nrow(x_train),,]
+y_val <- y_train[1:500]
+y_train_part <- y_train[501:length(y_train)]
+
 cat('Train...\n')
 model %>% fit(
-  x_train, y_train,
+  x_train_part, y_train_part,
   batch_size = batch_size,
-  epochs = 20,
-  validation_data = list(x_test, y_test)
+  epochs = 40,
+  validation_data = list(x_val, y_val)
 )
 
 scores <- model %>% evaluate(

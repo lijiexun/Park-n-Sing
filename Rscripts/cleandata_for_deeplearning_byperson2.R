@@ -22,7 +22,7 @@ x = list()
 for (i in 1:nrow(y)){
   temp = dplyr::select(filter(mytap2, healthCode==y$healthCode[i]), createdOn:corXY)
   temp$createdOn_scaled = temp$createdOn - temp$createdOn[1] 
-  temp <- temp %>% dplyr::select(createdOn, createdOn_scaled, everything())
+  temp <- temp %>% dplyr::select(createdOn_scaled, meanTapInter:corXY)
   x[[y$healthCode[i]]] = temp
 }
 
